@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Mantenimiento</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/homepage.css') }}">
+</head>
+<body>
+    <header>
+        {% include 'topbar.html' %}
+    </header>
+
+    <main>
+        <div class="content">
+            <section class="logs-list">
+                <div class="header-actions">
+                    <h2>Maintenance Logs</h2>
+                    <a href="{{ url_for('add_maintenance') }}" class="btn-add-maintenance">Añadir Nuevo</a>
+                </div>
+
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>date</th>
+                            <th>Vehiculo</th>
+                            <th>Hora de Inicio</th>
+                            <th>Hora de Termino</th>
+                            <th>component</th>
+                            <th>Acción</th>
+                            <th>kilometers</th>
+                            <th>hobbs_meter</th>
+                            <th>in_charge</th>
+                            <th>comment</th>
+                            <th>costs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.date }}</td>
+                            <td>{{ log.code }}</td>
+                            <td>{{ log.start_time or 'N/A' }}</td>
+                            <td>{{ log.end_time or 'N/A' }}</td>
+                            <td>{{ log.component }}</td>
+                            <td>{{ log.action }}</td>
+                            <td>{{ log.kilometers }}</td>
+                            <td>{{ log.hobbs_meter }}</td>
+                            <td>{{ log.in_charge }}</td>
+                            <td>{{ log.comment }}</td>
+                            <td>{{ log.cost }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <aside class="filters">
+                <h3>Filtros</h3>
+                <form method="GET" action="{{ url_for('maintenance_logs') }}">
+                    
+                    <!-- Vehicle Filter -->
+                    <label for="vehicle">Vehiculo:</label>
+                    <select id="vehicle" name="vehicle">
+                        <option value="">Todos los Vehiculos</option>
+                        {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.id }}" {% if request.args.get('vehicle') == vehicle.id|string %}selected{% endif %}>
+                            {{ vehicle.code }}
+                        </option>
+                        {% endfor %}
+                    </select>
+            
+                    <!-- Component Filter -->
+                    <label for="component">component:</label>
+                    <select id="component" name="component">
+                        <option value="">All Components</option>
+                        {% for component in components %}
+                        <option value="{{ component.id }}" {% if request.args.get('component') == component.id|string %}selected{% endif %}>
+                            {{ component.component }}
+                        </option>
+                        {% endfor %}
+                    </select>
+            
+                    <!-- Year Filter -->
+                    <label for="year">Año:</label>
+                    <select id="year" name="year">
+                        <option value="">Todos los años</option>
+                        {% for y in years %}
+                        <option value="{{ y }}" {% if request.args.get('year') == y|string %}selected{% endif %}>
+                            {{ y }}
+                        </option>
+                        {% endfor %}
+                    </select>
+            
+                    <!-- Date Range Filters -->
+                    <label for="date_from">From:</label>
+                    <input type="date" id="date_from" name="date_from" value="{{ request.args.get('date_from', '') }}">
+            
+                    <label for="date_to">To:</label>
+                    <input type="date" id="date_to" name="date_to" value="{{ request.args.get('date_to', '') }}">
+            
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </form>
+            </aside>            
+        </div>
+    </main>
+</body>
+</html>

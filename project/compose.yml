@@ -1,0 +1,12 @@
+services:
+  mysql:
+    image: mysql:9.1.0
+    restart: always
+    environment:
+      MYSQL_USER: fishcare
+      MYSQL_ROOT_PASSWORD: fishybusiness
+      MYSQL_DATABASE: mantencion
+    ports:
+      - "3307:3306"
+    volumes:
+      - .my/sql-data:/var/lib/mysql
