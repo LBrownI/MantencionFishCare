@@ -61,7 +61,42 @@ def all_logs(session):
         print(f'Error in all_employees: {e}')
     return []
 
-
+def get_log_details(session, log_id):
+    """Fetches detailed information about a specific maintenance log."""
+    try:
+        log = session.query(
+            MainLogs.id, MainLogs.date, MainLogs.start_time, MainLogs.end_time,
+            MainLogs.action, MainLogs.kilometers, MainLogs.hobbs_meter, MainLogs.next_change,
+            MainLogs.in_charge, MainLogs.comment, MainLogs.cost,
+            Vehicle.code.label('code'),
+            Component.component.label('component'),
+            Component.part.label('part')
+        ).outerjoin(Vehicle, Vehicle.id == MainLogs.vehicle_id) \
+         .outerjoin(Component, Component.id == MainLogs.component_id) \
+         .filter(MainLogs.id == log_id).first()
+        
+        # Convert to a dictionary if a result is found
+        if log:
+            return {
+                "id": log.id,
+                "date": log.date,
+                "start_time": log.start_time or "No registrado",
+                "end_time": log.end_time or "No registrado",
+                "action": log.action,
+                "kilometers": log.kilometers or "No registrado",
+                "hobbs_meter": log.hobbs_meter or "No registrado",
+                "next_change": log.next_change or "No registrado o Innecesario",
+                "in_charge": log.in_charge or "Desconocido",
+                "comment": log.comment or "Sin comentarios",
+                "cost": log.cost or "No registrado",
+                "code": log.code,
+                "component": log.component,
+                "part": log.part
+            }
+    except Exception as e:
+        print(f"Error fetching log details: {e}")
+        return None
+    
 def get_filtered_logs(session, vehicle_id=None, part=None, component=None, year=None, date_from=None, date_to=None):
     """
     Obtener historial de mantenimiento filtrado por vehiculo, parte, componente, año o rango de tiempo.
@@ -112,7 +147,7 @@ def get_filtered_logs(session, vehicle_id=None, part=None, component=None, year=
                 "next_change": log.next_change or "-",
                 "in_charge": log.in_charge,
                 "comment": log.comment,
-                "cost": log.cost or "Sin cost registrado",
+                "cost": log.cost or "Sin costo registrado",
                 "code": log.code,
                 "part": log.part,
                 "component": log.component
@@ -128,53 +163,5 @@ def get_filtered_logs(session, vehicle_id=None, part=None, component=None, year=
     except Exception as e:
         print(f"Error in get_filtered_logs: {e}")
         return []
-
-def add_maintenance_to_db(session, maintenance_data):
-    """Add a maintenance log to the database."""
-    try:
-        # Fetch the vehicle IDs based on code or type
-        if maintenance_data['vehicle'].lower() == 'Todos los tracto camiones':
-            vehicle_ids = [v[0] for v in session.query(Vehicle.id).filter(Vehicle.type.ilike('%T')).all()]
-        elif maintenance_data['vehicle'].lower() == 'Todos los semiremolques':
-            vehicle_ids = [v[0] for v in session.query(Vehicle.id).filter(Vehicle.type.ilike('%S')).all()]
-        else:
-            vehicle_ids = [session.query(Vehicle.id).filter_by(code=maintenance_data['vehicle']).scalar()]
-
-        if not vehicle_ids:
-            raise ValueError(f"Vehicle with code '{maintenance_data['vehicle']}' not found.")
-
-        # Fetch the component ID based on part and component
-        component_id = session.query(Component.id).filter_by(
-            part=maintenance_data['part'],
-            component=maintenance_data['component']
-        ).scalar()
-
-        if not component_id:
-            raise ValueError(f"Component '{maintenance_data['component']}' for part '{maintenance_data['part']}' not found.")
-
-        # Add a maintenance log for each vehicle in the list
-        for vehicle_id in vehicle_ids:
-            new_log = MainLogs(
-                vehicle_id=vehicle_id,
-                date=maintenance_data['date'],
-                start_time=maintenance_data['start_time'],
-                end_time=maintenance_data['end_time'],
-                action=maintenance_data['action'],
-                component_id=component_id,
-                kilometers=maintenance_data['kilometers'],
-                hobbs_meter=maintenance_data['hobbs_meter'],
-                next_change=maintenance_data['next_change'],
-                in_charge=maintenance_data['in_charge'],
-                comment=maintenance_data['comment'],
-                cost=maintenance_data['cost']
-            )
-            session.add(new_log)
-
-        session.commit()
-        return "Registro(s) de mantenimiento agregado(s) exitosamente"
-    except Exception as e:
-        session.rollback()
-        return f"Error al agregar el registro de mantenimiento: {e}"
-
 
 

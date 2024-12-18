@@ -13,7 +13,7 @@ app.secret_key = 'magickey'
 
 # Route for menu page (homepage)
 @app.route('/')
-def maintenance_logs():
+def logs():
     vehicle_id = request.args.get('code', type=int)
     component_id = request.args.get('component', type=int)
     year = request.args.get('year', type=int)
@@ -34,6 +34,25 @@ def maintenance_logs():
         vehicles=vehicles,
         components=components,
         years=[y[0] for y in years]  # Flatten result into a list of years
+    )
+
+@app.route('/logs', methods=['GET'])
+def detailed_log():
+    # Get the log ID
+    log_id = request.args.get('id')
+
+    if not log_id:
+        return render_template('detailed_log.html', error_message="No log ID provided")
+
+    # Fetch log details
+    log_details = get_log_details(session, log_id)
+
+    if not log_details:
+        return render_template('detailed_log.html', error_message="Log not found")
+
+    return render_template(
+        'detailed_log.html',
+        **log_details  # Pass all log details as template variables
     )
 
 @app.route('/add_maintenance', methods=['GET', 'POST'])
