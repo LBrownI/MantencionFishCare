@@ -6,14 +6,14 @@ from datetime import date
 
 # Configuration should match the Docker Compose file
 config = {
-    'host': 'localhost',  # Replace with 'mysql-db' if running in another container
+    'host': 'localhost',
     'database_name': 'mantencion',
-    'user': 'fishcare',  # Matches MYSQL_USER in compose
+    'user': 'root',  # Matches MYSQL_USER in compose
     'password': 'fishybusiness'  # Matches MYSQL_PASSWORD in compose
 }
 
 # Connect to MySQL using the database specified in the Compose file
-engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3307}/{config["database_name"]}', echo=True)
+engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3306}/{config["database_name"]}', echo=True)
 
 Base = declarative_base()
 

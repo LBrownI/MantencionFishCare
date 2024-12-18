@@ -6,19 +6,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import date, datetime
 from tables import *
 
-# Load the MySQL root password from environment variables
-mysql_root_password = os.getenv('MYSQL_ROOT_PASSWORD', 'default_root_pass')  # Fallback in case the env variable isn't set
-# You can set it up by doing: export MYSQL_ROOT_PASSWORD=your_secure_password
-
+# Configuration should match the Docker Compose file
 config = {
     'host': 'localhost',
-    'database_name': 'hr',
-    'user': 'root',
-    'password': mysql_root_password
-    }
+    'database_name': 'mantencion',
+    'user': 'root',  # Matches MYSQL_USER in compose
+    'password': 'fishybusiness'  # Matches MYSQL_PASSWORD in compose
+}
 
-engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}/{config["database_name"]}', echo=True)
-# engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}', echo=True)
+# Connect to MySQL using the database specified in the Compose file
+engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3306}/{config["database_name"]}', echo=True)
 
 Base = declarative_base()
 

@@ -4,20 +4,22 @@ from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 
+# docker run --name fish-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=fishybusiness -d mysql
+
 # Configuration should match the Docker Compose file
 config = {
-    'host': 'localhost',  # Replace with 'mysql-db' if running in another container
+    'host': 'localhost',
     'database_name': 'mantencion',
     'user': 'root',  # Matches MYSQL_USER in compose
-    'password': 'a301rrhh'  # Matches MYSQL_PASSWORD in compose
+    'password': 'fishybusiness'  # Matches MYSQL_PASSWORD in compose
 }
 
 # Connect to MySQL using the database specified in the Compose file
-engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3307}/{config["database_name"]}', echo=True)
+engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3306}/{config["database_name"]}', echo=True)
 
 with engine.connect() as connection:
     connection.execute(text("CREATE DATABASE IF NOT EXISTS mantencion"))
-engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3307}/{config["database_name"]}', echo=True)
+engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{config["host"]}:{3306}/{config["database_name"]}', echo=True)
 
 Base = declarative_base()
 
