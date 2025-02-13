@@ -6,6 +6,36 @@
     <title>Historial</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .btn-excel {
+            background-color: #217346 !important;  /* Excel's brand green */
+            border-color: #1a5c38 !important;
+            color: white !important;
+            display: flex !important;
+            align-items: center;
+        }
+    
+        .btn-excel:hover {
+            background-color: #1a5c38 !important;
+            border-color: #144527 !important;
+            color: white !important;
+        }
+        
+        /* Remove the image filter and ensure proper image display */
+        .btn-excel img {
+            height: 20px;
+            width: auto;
+            margin-right: 8px;
+            /* Removed the filter property */
+        }
+    
+        .pagination-container {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -18,50 +48,163 @@
             <div class="col-lg-9">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2>Historial de Mantenimiento</h2>
-                    <a href="{{ url_for('add_maintenance') }}" class="btn btn-primary">Descargar Excel</a>
-                    <a href="{{ url_for('add_maintenance') }}" class="btn btn-primary">Añadir Nuevo</a>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ url_for('download_logs') }}" class="btn btn-excel d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='images/Microsoft_Excel_Inverted.png') }}" alt="Excel Icon" height="20" class="me-2">
+                            Descargar Excel
+                        </a>
+                        <form action="{{ url_for('upload_logs') }}" method="post" enctype="multipart/form-data">
+                            <label for="file-upload" class="btn btn-excel d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='images/Microsoft_Excel_Inverted.png') }}" alt="Excel Icon" height="20" class="me-2">
+                                Subir Excel
+                            </label>
+                            <input id="file-upload" type="file" name="file" accept=".xlsx" style="display: none;" onchange="this.form.submit()">
+                        </form>
+                        <a href="{{ url_for('add_maintenance') }}" class="btn btn-primary d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='images/white-plus-icon.png') }}" alt="Plus Icon" height="20" class="me-2">                    
+                            Añadir Nuevo
+                        </a>
+                    </div>
                 </div>
 
+                <!-- Top Pagination and Page Size -->
+                <div class="pagination-container">
+                    <div class="d-flex align-items-center gap-3">
+                        <select class="form-select" id="per_page" style="width: auto;">
+                            <option value="20" {% if per_page == 20 %}selected{% endif %}>20 por página</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 por página</option>
+                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 por página</option>
+                        </select>
+                        <span class="text-muted">Total: {{ total_pages }} páginas</span>
+                    </div>
+                    <nav aria-label="Top pagination">
+                        <ul class="pagination mb-0">
+                            <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('logs', page=current_page-1, per_page=per_page, **current_filters) }}">&laquo;</a>
+                            </li>
+                            <li class="page-item active">
+                                <span class="page-link">{{ current_page }}</span>
+                            </li>
+                            <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('logs', page=current_page+1, per_page=per_page, **current_filters) }}">&raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Fecha</th>
-                                <th>Vehículo</th>
-                                <th>Parte</th>
-                                <th>Componente</th>
-                                <th>Acción</th>
-                                <th>Responsable</th>
-                                <th>Costo</th>
+                                <th>Ver Más</th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='log_date', sort_dir='asc' if sort_by == 'log_date' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Fecha {% if sort_by == 'log_date' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a>
+                                        Equipo 
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='part', sort_dir='asc' if sort_by == 'part' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Parte {% if sort_by == 'part' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='component', sort_dir='asc' if sort_by == 'component' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Componente {% if sort_by == 'component' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='action', sort_dir='asc' if sort_by == 'action' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Acción {% if sort_by == 'action' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='supervisor', sort_dir='asc' if sort_by == 'supervisor' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Responsable {% if sort_by == 'supervisor' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="{{ url_for('logs', sort_by='cost', sort_dir='asc' if sort_by == 'cost' and sort_dir == 'desc' else 'desc', **current_filters) }}">
+                                        Costo {% if sort_by == 'cost' %}{{ '↑' if sort_dir == 'asc' else '↓' }}{% endif %}
+                                    </a>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs %}
                             <tr>
-                                <td><a href="{{ url_for('detailed_log', id=log.id) }}" target="_blank">{{ log.date }}</a></td>
+                                <td>
+                                    <a href="{{ url_for('detailed_log', id=log['id']) }}" class="navbar-brand d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='images/search_lens_grey_box.png') }}" alt="Details Icon" height="40" class="me-3">
+                                    </a>
+                                </td>
+                                <td>{{ log.log_date }}</td>
                                 <td>{{ log.code }}</td>
-                                <td>{{ log.component }}</td>
                                 <td>{{ log.part }}</td>
+                                <td>{{ log.component }}</td>
                                 <td>{{ log.action }}</td>
-                                <td>{{ log.in_charge }}</td>
+                                <td>{{ log.supervisor }}</td>
+                                <td>{{ log.cost or "Sin costo registrado" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+
+            <!-- Bottom Pagination -->
+            <div class="pagination-container">
+                <div class="d-flex align-items-center gap-3">
+                    <span>Mostrando {{ logs|length }} resultados</span>
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('logs', page=current_page-1, per_page=per_page, **current_filters) }}">&laquo; Anterior</a>
+                        </li>
+                        {% for p in range(1, total_pages + 1) %}
+                            <li class="page-item {% if p == current_page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('logs', page=p, per_page=per_page, **current_filters) }}">{{ p }}</a>
+                            </li>
+                        {% endfor %}
+                        <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('logs', page=current_page+1, per_page=per_page, **current_filters) }}">Siguiente &raquo;</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
             </div>
 
             <!-- Filters Section -->
             <div class="col-lg-3">
                 <h3>Filtros</h3>
                 <form method="GET" action="{{ url_for('logs') }}">
+                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                    <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="per_page" value="{{ per_page }}">
+                    
                     <div class="mb-3">
-                        <label for="vehicle" class="form-label">Vehículo</label>
+                        <label for="vehicle" class="form-label">Equipo</label>
                         <select id="vehicle" name="code" class="form-select">
-                            <option value="">Todos los Vehículos</option>
-                            {% for vehicle in vehicles %}
-                            <option value="{{ vehicle.id }}" {% if request.args.get('code') == vehicle.id|string %}selected{% endif %}>
-                                {{ vehicle.code }}
+                            <option value="">Todos los Equipos</option>
+                            {% for n in range(1, 12) %}
+                            <option value="T{{ n }}" {% if current_filters.code in ['T'~n, 'S'~n] %}selected{% endif %}>
+                                T{{ n }} (incluye S{{ n }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="part" class="form-label">Parte</label>
+                        <select id="part" name="part" class="form-select">
+                            <option value="">Todas las Partes</option>
+                            {% for component in components %}
+                            <option value="{{ component.part }}" {% if current_filters.part == component.part %}selected{% endif %}>
+                                {{ component.part }}
                             </option>
                             {% endfor %}
                         </select>
@@ -72,7 +215,7 @@
                         <select id="component" name="component" class="form-select">
                             <option value="">Todos los Componentes</option>
                             {% for component in components %}
-                            <option value="{{ component.id }}" {% if request.args.get('component') == component.id|string %}selected{% endif %}>
+                            <option value="{{ component.component }}" {% if current_filters.component == component.component %}selected{% endif %}>
                                 {{ component.component }}
                             </option>
                             {% endfor %}
@@ -84,7 +227,7 @@
                         <select id="year" name="year" class="form-select">
                             <option value="">Todos los Años</option>
                             {% for y in years %}
-                            <option value="{{ y }}" {% if request.args.get('year') == y|string %}selected{% endif %}>
+                            <option value="{{ y }}" {% if current_filters.year == y|string %}selected{% endif %}>
                                 {{ y }}
                             </option>
                             {% endfor %}
@@ -93,12 +236,12 @@
 
                     <div class="mb-3">
                         <label for="date_from" class="form-label">Desde</label>
-                        <input type="date" id="date_from" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}">
+                        <input type="date" id="date_from" name="date_from" class="form-control" value="{{ current_filters.date_from }}">
                     </div>
 
                     <div class="mb-3">
                         <label for="date_to" class="form-label">Hasta</label>
-                        <input type="date" id="date_to" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}">
+                        <input type="date" id="date_to" name="date_to" class="form-control" value="{{ current_filters.date_to }}">
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
@@ -109,5 +252,14 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Per page selector
+        document.getElementById('per_page').addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('per_page', this.value);
+            params.delete('page'); // Reset to first page
+            window.location.search = params.toString();
+        });
+    </script>
 </body>
 </html>

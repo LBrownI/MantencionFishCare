@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from decimal import Decimal
 from sqlalchemy import create_engine, text, func, update
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -26,9 +27,9 @@ def add_maintenance_to_db(session, maintenance_data):
     """Add a maintenance log to the database."""
     try:
         # Fetch the vehicle IDs based on code or type
-        if maintenance_data['vehicle'].lower() == 'Todos los tracto camiones':
+        if maintenance_data['vehicle'].lower() == 'todos los equipos':
             vehicle_ids = [v[0] for v in session.query(Vehicle.id).filter(Vehicle.type.ilike('%T')).all()]
-        elif maintenance_data['vehicle'].lower() == 'Todos los semiremolques':
+        elif maintenance_data['vehicle'].lower() == 'todos los semiremolques':
             vehicle_ids = [v[0] for v in session.query(Vehicle.id).filter(Vehicle.type.ilike('%S')).all()]
         else:
             vehicle_ids = [session.query(Vehicle.id).filter_by(code=maintenance_data['vehicle']).scalar()]
@@ -68,5 +69,8 @@ def add_maintenance_to_db(session, maintenance_data):
     except Exception as e:
         session.rollback()
         return f"Error al agregar el registro de mantenimiento: {e}"
+    
+
+
 
 

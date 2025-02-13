@@ -1,152 +1,283 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Añadir Registro</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Añadir Registros de Mantenimiento</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .compact-group .row {
+      margin-bottom: 0.5rem;
+    }
+    .compact-group label {
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        {% include 'topbar.html' %}
-    </header>
+  <header>
+    {% include 'topbar.html' %}
+  </header>
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">Añadir Registros de Mantenimiento</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form action="{{ url_for('add_maintenance') }}" method="POST" id="maintenanceForm">
 
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">Añadir Registro de Mantenimiento</h1>
-
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-info">
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        <form action="/add_maintenance" method="POST" id="maintenanceForm" class="needs-validation" novalidate>
-            <div class="mb-3">
-                <label for="vehicle" class="form-label">Equipo:</label>
-                <select id="vehicle" name="vehicle" class="form-select" required>
-                    <option value="">Selecciona el equipo</option>
-                    <option value="Todos_tracto_camiones">Todos los Tracto Camiones</option>
-                    <option value="Todos_semiremolques">Todos los Semiremolques</option>
-                    {% for vehicle in vehicles %}
-                        <option value="{{ vehicle.code }}">{{ vehicle.code }}</option>
-                    {% endfor %}
-                </select>
-                <div class="invalid-feedback">Por favor selecciona un equipo.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="part" class="form-label">Parte:</label>
-                <select id="part" name="part" class="form-select" required>
-                    <option value="">Selecciona una parte</option>
-                    {% for part in parts %}
-                        <option value="{{ part[0] }}">{{ part[0] }}</option>
+      <!-- Static Main Group -->
+      <table class="table table-bordered" id="mainTable">
+        <thead>
+            <tr>
+                <th>Equipo</th>
+                <th>Fecha</th>
+                <th>Kilometros</th>
+                <th>Odometro (Hrs)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+              <td>
+                <select id="team" name="team" class="form-select" required>
+                    <option value="">Selecciona Equipo</option>
+                    {% for i in range(1, 12) %}
+                        <option value="T{{ i }}">T{{ i }}</option>
                     {% endfor %}
                 </select>
-                <div class="invalid-feedback">Por favor selecciona una parte.</div>
-            </div>
+              </td>
+                <td><input type="date" id="date" name="date" class="form-control" required></td>
+                <td><input type="number" id="kilometers" name="kilometers" class="form-control" required></td>
+                <td><input type="number" step="0.01" id="hobbs_meter" name="hobbs_meter" class="form-control" required></td>
+            </tr>
+        </tbody>
+      </table>
 
-            <div class="mb-3">
-                <label for="component" class="form-label">Componente:</label>
-                <select id="component" name="component" class="form-select" required>
-                    <option value="">Selecciona un componente</option>
-                    {% for component in components %}
-                        <option value="{{ component[0] }}">{{ component[0] }}</option>
-                    {% endfor %}
+      <!-- Dynamic Multi Table -->
+      <table class="table table-bordered" id="entriesTable">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Hora Inicio</th>
+            <th>Hora Término</th>
+            <th>Parte</th>
+            <th>Componente</th>
+            <th>Acción</th>
+            <th>Detalle</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <select name="vehicle_type[]" class="form-select vehicle-type-select" required>
+                  <option value="">Selecciona tipo</option>
+                  <option value="T">Tracto Camión</option>
+                  <option value="S">Semirremolque</option>
+              </select>
+              <input type="hidden" name="vehicle_code[]" id="vehicleCode">
+            </td>
+            <td><input type="time" name="start_time[]" class="form-control" required></td>
+            <td><input type="time" name="end_time[]" class="form-control" required></td>
+            <td>
+              <select name="part[]" class="form-select part-select" required 
+                      onchange="loadComponents(this.value, this.closest('tr'))" 
+                      disabled>
+                <option value="">Selecciona parte</option>
+              </select>
+            </td>
+            <td>
+              <select name="component[]" class="form-select component-select" required 
+                      disabled>
+                <option value="">Selecciona componente</option>
+              </select>
+            </td>
+            <td>
+              <select name="action[]" class="form-select" required>
+                <option value="">Selecciona acción</option>
+                <option value="Cambio">Cambio</option>
+                <option value="Limpieza">Limpieza</option>
+                <option value="Engrase">Engrase</option>
+                <option value="Reparación">Reparación</option>
+                <option value="Instalación">Instalación</option>
+                <option value="Revisión">Revisión</option>
+                <option value="Relleno">Relleno</option>
+              </select>
+            </td>
+            <td><textarea name="comment[]" class="form-control" required></textarea></td>
+            <td><button type="button" class="btn btn-danger removeRow">Eliminar</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="d-grid gap-2 mb-3">
+          <button type="button" id="addRow" class="btn btn-secondary">Agregar entrada</button>
+      </div>  
+
+      <div class="mb-3 d-flex align-items-end">
+          <div class="flex-grow-1">
+            <label for="in_charge" class="form-label">Responsable:</label>
+            <input type="text" id="in_charge" name="in_charge" class="form-control" required>
+          </div>
+          <div class="ms-2">
+            <button type="submit" class="btn btn-primary">Enviar Registros</button>
+          </div>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Team selection handler
+    document.getElementById("team").addEventListener("change", function() {
+        const selectedTeam = this.value;
+        const teamNumber = selectedTeam.replace('T', '');
+        
+        // Update all existing rows
+        document.querySelectorAll('.vehicle-type-select').forEach(select => {
+            select.innerHTML = `
+                <option value="">Selecciona tipo</option>
+                <option value="T${teamNumber}">Tracto Camión</option>
+                <option value="S${teamNumber}">Semirremolque</option>
+            `;
+        });
+    });
+    
+    // Function to create a new row template
+    function createNewRow() {
+        const teamSelect = document.getElementById('team');
+        const teamNumber = teamSelect.value ? teamSelect.value.replace('T', '') : '';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="vehicle_type[]" class="form-select vehicle-type-select" required>
+                    <option value="">Selecciona tipo</option>
+                    ${teamNumber ? `
+                    <option value="T${teamNumber}">Tracto Camión</option>
+                    <option value="S${teamNumber}">Semirremolque</option>
+                    ` : ''}
                 </select>
-                <div class="invalid-feedback">Por favor selecciona un componente.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="date" class="form-label">Fecha:</label>
-                <input type="date" id="date" name="date" class="form-control" required>
-                <div class="invalid-feedback">Por favor selecciona una fecha.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="start_time" class="form-label">Hora Inicio:</label>
-                <input type="time" id="start_time" name="start_time" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label for="end_time" class="form-label">Hora Termino:</label>
-                <input type="time" id="end_time" name="end_time" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label for="action" class="form-label">Acción:</label>
-                <select id="action" name="action" class="form-select" required>
-                    <option value="">Selecciona una acción</option>
+            </td>
+            <td><input type="time" name="start_time[]" class="form-control" required></td>
+            <td><input type="time" name="end_time[]" class="form-control" required></td>
+            <td>
+                <select name="part[]" class="form-select part-select" required 
+                        onchange="loadComponents(this.value, this.closest('tr'))" 
+                        disabled>
+                    <option value="">Selecciona parte</option>
+                </select>
+            </td>
+            <td>
+                <select name="component[]" class="form-select component-select" required 
+                        disabled>
+                    <option value="">Selecciona componente</option>
+                </select>
+            </td>
+            <td>
+                <select name="action[]" class="form-select" required>
+                    <option value="">Selecciona acción</option>
                     <option value="Cambio">Cambio</option>
-                    <option value="Instalación">Instalación</option>
+                    <option value="Limpieza">Limpieza</option>
+                    <option value="Engrase">Engrase</option>
                     <option value="Reparación">Reparación</option>
+                    <option value="Instalación">Instalación</option>
+                    <option value="Revisión">Revisión</option>
                     <option value="Relleno">Relleno</option>
                 </select>
-                <div class="invalid-feedback">Por favor selecciona una acción.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="kilometers" class="form-label">Kilometros:</label>
-                <input type="number" id="kilometers" name="kilometers" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label for="hobbs_meter" class="form-label">Horometro:</label>
-                <input type="number" step="0.01" id="hobbs_meter" name="hobbs_meter" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label for="next_change" class="form-label">Proximo cambio:</label>
-                <input type="number" step="0.01" id="next_change" name="next_change" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label for="in_charge" class="form-label">Responsable:</label>
-                <input type="text" id="in_charge" name="in_charge" class="form-control" required>
-                <div class="invalid-feedback">Por favor proporciona el nombre del responsable.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="comment" class="form-label">Comentario:</label>
-                <textarea id="comment" name="comment" class="form-control" required></textarea>
-                <div class="invalid-feedback">Por favor añade un comentario.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="cost" class="form-label">Costo:</label>
-                <input type="number" step="0.01" id="cost" name="cost" class="form-control">
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100">Añadir registro</button>
-
-            <div class="container mt-5 mb-5">
-                <!-- Your form content -->
-            </div>
-            
-        </form>
-    </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Bootstrap form validation
-        (function () {
-            'use strict';
-            const forms = document.querySelectorAll('.needs-validation');
-            Array.from(forms).forEach(form => {
-                form.addEventListener('submit', event => {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                    form.classList.add('was-validated');
-                }, false);
+            </td>
+            <td><textarea name="comment[]" class="form-control" required></textarea></td>
+            <td><button type="button" class="btn btn-danger removeRow">Eliminar</button></td>
+        `;
+        return row;
+    }
+    
+    // Modified loadParts function
+    function loadParts(vehicleCode, row) {
+        const typeLetter = vehicleCode.charAt(0);
+        fetch(`/get_parts/${typeLetter}`)
+            .then(response => response.json())
+            .then(parts => {
+                const partSelect = row.querySelector('.part-select');
+                partSelect.disabled = false;
+                partSelect.innerHTML = `<option value="">Selecciona parte</option>${
+                    parts.map(p => `<option value="${p}">${p}</option>`).join('')
+                }`;
             });
-        })();
+    }
+    
+    // Modified loadComponents function
+    function loadComponents(part, row) {
+        const vehicleCode = row.querySelector('.vehicle-type-select').value;
+        const typeLetter = vehicleCode.charAt(0);
+        fetch(`/get_components/${typeLetter}/${encodeURIComponent(part)}`)
+            .then(response => response.json())
+            .then(components => {
+                const componentSelect = row.querySelector('.component-select');
+                componentSelect.disabled = false;
+                componentSelect.innerHTML = `<option value="">Selecciona componente</option>${
+                    components.map(c => `<option value="${c}">${c}</option>`).join('')
+                }`;
+            });
+    }
+    
+    // Add row functionality
+    document.getElementById('addRow').addEventListener('click', function() {
+        const tbody = document.querySelector('#entriesTable tbody');
+        const newRow = createNewRow();
+        tbody.appendChild(newRow);
+    
+        // Add event listener for vehicle type change in the new row
+        newRow.querySelector('.vehicle-type-select').addEventListener('change', function() {
+            const vehicleCode = this.value;
+            loadParts(vehicleCode, newRow);
+        });
+    });
+    
+    // Remove row functionality (unchanged)
+    document.getElementById('entriesTable').addEventListener('click', function(e) {
+        if (e.target.classList.contains('removeRow')) {
+            const row = e.target.closest('tr');
+            if (document.querySelectorAll('#entriesTable tbody tr').length > 1) {
+                row.remove();
+            }
+        }
+    });
+    
+    // Initialize existing rows (if any)
+    document.querySelectorAll('.vehicle-type-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const vehicleCode = this.value;
+            const row = this.closest('tr');
+            loadParts(vehicleCode, row);
+        });
+    });
     </script>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="successModalLabel">¡Éxito!</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Registros añadidos exitosamente.
+        </div>
+        <div class="modal-footer">
+          <a href="{{ url_for('logs') }}" class="btn btn-primary">Volver al Historial</a>
+          <button type="button" class="btn btn-secondary" onclick="location.reload()">Seguir Añadiendo</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

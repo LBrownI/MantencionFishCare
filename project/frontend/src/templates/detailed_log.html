@@ -1,81 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle Registro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .log-box {
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .log-box h4 {
-            margin-bottom: 15px;
-            font-size: 1.25rem;
-            color: #007bff;
-        }
-
-        .log-box p {
-            font-size: 1rem;
-            margin-bottom: 10px;
-        }
-
-        .log-details-container {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-        }
-
-        .log-box-container {
-            width: 45%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle Registro</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .log-box {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .log-box h4 {
+      margin-bottom: 15px;
+      font-size: 1.25rem;
+      color: #007bff;
+    }
+    .log-box p {
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+    .log-details-container {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+    }
+    .log-box-container {
+      width: 45%;
+    }
+  </style>
 </head>
 <body>
-    <div class="container my-5">
-        <h1 class="text-center mb-4">Detalle de Registro</h1>
-        
-        {% if error_message %}
-        <div class="alert alert-danger" role="alert">
-            {{ error_message }}
-        </div>
-        {% else %}
-        <div class="log-details-container">
-            <!-- First Box -->
-            <div class="log-box log-box-container">
-                <h4>Información del Mantenimiento</h4>
-                <p><strong>Código de Equipo:</strong> {{ code }}</p>
-                <p><strong>Fecha:</strong> {{ date }}</p>
-                <p><strong>Hora Inicio:</strong> {{ start_time }}</p>
-                <p><strong>Hora Término:</strong> {{ end_time }}</p>
-                <p><strong>Parte:</strong> {{ part }}</p>
-                <p><strong>Componente:</strong> {{ component }}</p>
-                <p><strong>Acción:</strong> {{ action }}</p>
-                <p><strong>Kilómetros:</strong> {{ kilometers }}</p>
-                <p><strong>Horómetro:</strong> {{ hobbs_meter }}</p>
-            </div>
-
-            <!-- Second Box -->
-            <div class="log-box log-box-container">
-                <h4>Detalles Adicionales</h4>
-                <p><strong>Próximo Cambio:</strong> {{ next_change }}</p>
-                <p><strong>Costo:</strong> {{ cost }}</p>
-                <p><strong>Responsable:</strong> {{ in_charge }}</p>
-                <p><strong>Comentarios:</strong> {{ comment }}</p>
-            </div>
-        </div>
-
-        <div class="text-center mt-4">
-            <a href="{{ url_for('logs') }}" class="btn btn-primary">Volver a la lista de registros</a>
-        </div>
+  <div class="container my-5">
+    <h1 class="text-center mb-4">Detalle de Registro</h1>
+    
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+      {{ error_message }}
+    </div>
+    {% else %}
+    <div class="log-details-container">
+      <!-- Primer Bloque -->
+      <div class="log-box log-box-container">
+        <h4>Información del Mantenimiento</h4>
+        <p><strong>Código de Equipo:</strong> {{ code }}</p>
+        {% if code[0] == 'T' %}
+          <p><strong>Tipo:</strong> Tracto Camión</p>
+        {% elif code[0] == 'S' %}
+          <p><strong>Tipo:</strong> Semirremolque</p>
         {% endif %}
+        <p>
+          <strong>Fecha:</strong>
+          {{ log_date.strftime('%d/%m/%Y') if log_date else '' }}
+        </p>
+        <p><strong>Hora Inicio:</strong> {{ start_time }}</p>
+        <p><strong>Hora Término:</strong> {{ end_time }}</p>
+        <p><strong>Acción:</strong> {{ action }}</p>
+        <p><strong>Parte:</strong> {{ part }}</p>
+        <p><strong>Componente:</strong> {{ component }}</p>
+      </div>
+
+      <!-- Segundo Bloque -->
+      <div class="log-box log-box-container">
+        <h4>Detalles Adicionales</h4>
+        <p><strong>Kilómetros:</strong> {{ odometer_km }}</p>
+        <p><strong>Odómetro (Hrs):</strong> {{ odometer_hrs }}</p>
+        <p><strong>Costo:</strong> {{ cost }}</p>
+        <p><strong>Responsable:</strong> {{ supervisor }}</p>
+        <p><strong>Comentarios:</strong> {{ comment }}</p>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="text-center mt-4">
+      <a href="{{ url_for('logs') }}" class="btn btn-primary">Volver a la lista de registros</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
