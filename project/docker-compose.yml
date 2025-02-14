@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
+    container_name: Mantencion_Fishcare_db
     environment:
       MYSQL_ROOT_PASSWORD: fishybusiness
       MYSQL_DATABASE: mantencion
@@ -15,21 +14,23 @@ services:
       interval: 5s
       timeout: 10s
       retries: 5
+    restart: always
 
   app:
     build: .
+    container_name: Mantencion_Fishcare_app
     ports:
       - "5000:5000"
     environment:
-      FLASK_APP: backend/app.py
-      #FLASK_ENV: development
-      FLASK_ENV: production
+      FLASK_APP: app.py
+      FLASK_ENV: development
       DB_HOST: db
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - .:/app
+    restart: always
 
 volumes:
   mysql_data:
