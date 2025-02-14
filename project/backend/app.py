@@ -468,5 +468,8 @@ def upload_logs():
     flash("Invalid file type. Please upload an Excel file.", "main_logs")
     return redirect(url_for("logs"))
 
+@app.route("/guide")
+def show_pdf():
+    return render_template("guide.html")
 if __name__ == '__main__':
     app.run(debug=True)
