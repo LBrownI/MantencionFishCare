@@ -2,6 +2,7 @@ import os
 from sqlalchemy import create_engine, text, Column, Integer, String, ForeignKey, DECIMAL, Date, Text, Boolean, Time, Enum
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 from datetime import date
 
 # Configuration should match the Docker Compose file
@@ -21,6 +22,20 @@ engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{
 
 Base = declarative_base()
 
+# User model
+class User(UserMixin, Base):
+    __tablename__ = 'User'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    role = Column(Enum('admin', 'mantencion'), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
 # Vehicles model
 class Vehicle(Base):
     __tablename__ = 'Vehicle'
@@ -79,6 +94,30 @@ Base.metadata.create_all(engine)
 # Create a session to interact with the database
 Session = sessionmaker(bind=engine)
 session = Session()
+
+user_data = [
+    {
+        'username': 'admin',
+        'password_hash': generate_password_hash('Fishcare2025.'),
+        'role': 'admin'
+    },
+    {
+        'username': 'mantencion',
+        'password_hash': generate_password_hash('mnt1234'),
+        'role': 'mantencion'
+    }
+]
+
+# Check if users already exist before adding
+existing_users = session.query(User).count()
+if existing_users == 0:
+    for data in user_data:
+        user = User(**data)
+        session.add(user)
+    session.commit()
+    print("Default users created successfully")
+else:
+    print("Users already exist, skipping user creation")
 
 # Insert data into Vehicle table
 vehicle_data = [
@@ -355,85 +394,6 @@ for data in component_data:
     component = Component(**data)
     session.add(component)
 session.commit()
-
-maintenance_data = [
-    {
-        'id': 1,
-        'vehicle_id': 1,  
-        'log_date': '2024-04-08',  # Changed from 'date' to 'log_date'
-        'start_time': None,
-        'end_time': None,
-        'action': 'Instalación',
-        'component_id': 406,  # Manómetro de oxígeno (Piping -> Oxígeno)
-        'odometer_km': None,  # Changed from 'kilometers' to 'odometer_km'
-        'odometer_hrs': None,  # Changed from 'hobbs_meter' to 'odometer_hrs'
-        'supervisor': 'N/A',  # Changed from 'in_charge' to 'supervisor'
-        'comment': 'Se entrega 01 manómetro de oxígeno (nuevo)',
-        'cost': None,
-    },
-    {
-        'id': 2,
-        'vehicle_id': 1,
-        'log_date': '2024-04-12',  # Changed from 'date' to 'log_date'
-        'start_time': None,
-        'end_time': None,
-        'action': 'Relleno', 
-        'component_id': 2004,  # Motor -> Refrigeración
-        'odometer_km': None,  # Changed from 'kilometers' to 'odometer_km'
-        'odometer_hrs': None,  # Changed from 'hobbs_meter' to 'odometer_hrs'
-        'supervisor': 'N/A',  # Changed from 'in_charge' to 'supervisor'
-        'comment': 'Se rellenó con aceite tracto camión 4 Lt.',
-        'cost': None,
-    },
-    {   
-        'id': 3,
-        'vehicle_id': 2,  
-        'log_date': '2024-04-22',  # Changed from 'date' to 'log_date'
-        'start_time': None,
-        'end_time': None,
-        'action': 'Cambio',
-        'component_id': 603,  # Frenos -> Pulmón freno (Semirremolque)
-        'odometer_km': None,  # Changed from 'kilometers' to 'odometer_km'
-        'odometer_hrs': None,  # Changed from 'hobbs_meter' to 'odometer_hrs'
-        'supervisor': 'N/A',  # Changed from 'in_charge' to 'supervisor'
-        'comment': 'Cambio pulmón de aire',
-        'cost': None,
-    },
-    {
-        'id': 4,
-        'vehicle_id': 1,
-        'log_date': '2024-04-26',  # Changed from 'date' to 'log_date'
-        'start_time': None,
-        'end_time': None,
-        'action': 'Cambio',
-        'component_id': 2004,  # Motor -> Refrigeración
-        'odometer_km': 356867,  # Changed from 'kilometers' to 'odometer_km'
-        'odometer_hrs': None,  # Changed from 'hobbs_meter' to 'odometer_hrs'
-        'supervisor': 'N/A',  # Changed from 'in_charge' to 'supervisor'
-        'comment': 'Se cambió líquido refrigerante radiador km 356867',
-        'cost': None,
-    },
-    {
-        'id': 5,
-        'vehicle_id': 2,
-        'log_date': '2024-04-26',  # Changed from 'date' to 'log_date'
-        'start_time': None,
-        'end_time': None,
-        'action': 'Cambio',
-        'component_id': 1305,  # Luces -> Iluminación trocha (amarillas)
-        'odometer_km': None,  # Changed from 'kilometers' to 'odometer_km'
-        'odometer_hrs': None,  # Changed from 'hobbs_meter' to 'odometer_hrs'
-        'supervisor': 'N/A',  # Changed from 'in_charge' to 'supervisor'
-        'comment': 'Se cambiaron luces de trocha (amarillas)',
-        'cost': None,
-    }
-]
-
-for data in maintenance_data:
-    maintenance = MainLogs(**data)
-    session.add(maintenance)
-session.commit()
-
 
 # Insert data into TechnicalReview table
 tech_review_data = [

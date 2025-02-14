@@ -2,6 +2,7 @@ import os
 from sqlalchemy import create_engine, text, Column, Integer, String, ForeignKey, DECIMAL, Date, Text, Boolean, Time, Enum
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 from datetime import date
 
 # Configuration should match the Docker Compose file
@@ -21,6 +22,20 @@ engine = create_engine(f'mysql+pymysql://{config["user"]}:{config["password"]}@{
 
 Base = declarative_base()
 
+# User model
+class User(UserMixin, Base):
+    __tablename__ = 'User'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    role = Column(Enum('admin', 'mantencion'), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
 # Vehicles model
 class Vehicle(Base):
     __tablename__ = 'Vehicle'

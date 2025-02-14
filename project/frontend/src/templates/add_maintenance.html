@@ -22,15 +22,19 @@
   <header>
     {% include 'topbar.html' %}
   </header>
+
+  {% with messages = get_flashed_messages(category_filter=["add_maintenance"]) %}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-info">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
   <div class="container mt-5">
     <h1 class="text-center mb-4">Añadir Registros de Mantenimiento</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
     <form action="{{ url_for('add_maintenance') }}" method="POST" id="maintenanceForm">
 
       <!-- Static Main Group -->
