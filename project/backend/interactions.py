@@ -71,6 +71,31 @@ def add_maintenance_to_db(session, maintenance_data):
         return f"Error al agregar el registro de mantenimiento: {e}"
     
 
+def log_deleter(session, id):
+    """Delete a maintenance log from the database"""
+    try:
+        log = session.query(MainLogs).get(id)
+        if log:
+            session.delete(log)
+            session.commit()
+            return True
+        return False
+    except Exception as e:
+        session.rollback()
+        print(f"Error deleting log: {e}")
+        return False
 
-
+def update_log_cost(session, id, new_cost):
+    """Update the cost of a maintenance log"""
+    try:
+        log = session.query(MainLogs).get(id)
+        if log:
+            log.cost = new_cost
+            session.commit()
+            return True
+        return False
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating cost: {e}")
+        return False
 

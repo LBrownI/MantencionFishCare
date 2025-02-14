@@ -7,7 +7,7 @@ from queries import *
 from interactions import *
 from werkzeug.utils import secure_filename
 from datetime import datetime
-
+import pytz
 
 app = Flask(
     __name__, 
@@ -18,6 +18,9 @@ app.secret_key = 'magickey'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:fishybusiness@localhost/mantencion'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+def get_local_time():
+    return datetime.now(pytz.timezone('America/Santiago'))
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 ALLOWED_EXTENSIONS = {"xlsx"}
@@ -190,13 +193,30 @@ def detailed_log():
         **log_details  # Pass all log details as template variables
     )
 
+@app.route('/logs/<int:id>/delete', methods=['POST'])
+def delete_log(id):
+    if log_deleter(session, id):
+        flash("Registro eliminado exitosamente", "detailed_log")
+    else:
+        flash("Error al eliminar el registro", "detailed_log")
+    return redirect(url_for('logs'))
+
+@app.route('/log_detail/<int:id>/update_cost', methods=['POST'])
+def update_cost(id):
+    new_cost = request.form.get('new_cost')
+    if update_log_cost(session, id, new_cost):
+        flash("Costo actualizado exitosamente", "main_logs")
+    else:
+        flash("Error al actualizar el costo", "main_logs")
+    return redirect(url_for('detailed_log', id=id))
+
 @app.route('/add_maintenance', methods=['GET', 'POST'])
 def add_maintenance():
     if request.method == 'POST':
         # Base team selection (T1-T11)
         team = request.form.get('team')
         if not team or not team.startswith('T'):
-            flash("Selección de equipo inválida", "error")
+            flash("Selección de equipo inválida", "add_maintenance")
             return redirect(url_for('add_maintenance'))
 
         try:
@@ -204,7 +224,7 @@ def add_maintenance():
             if team_number < 1 or team_number > 11:
                 raise ValueError
         except ValueError:
-            flash("Número de equipo inválido", "error")
+            flash("Número de equipo inválido", "add_maintenance")
             return redirect(url_for('add_maintenance'))
 
         # Shared fields
@@ -216,7 +236,7 @@ def add_maintenance():
         try:
             log_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
         except ValueError:
-            flash("Formato de fecha inválido.", "error")
+            flash("Formato de fecha inválido.", "add_maintenance")
             return redirect(url_for('add_maintenance'))
 
         # Get dynamic entries
@@ -230,7 +250,7 @@ def add_maintenance():
 
         # Validate equal number of entries
         if len(set(map(len, [vehicle_codes, start_times, end_times, parts, components, actions, comments]))) != 1:
-            flash("Número de entradas inconsistentes", "error")
+            flash("Número de entradas inconsistentes", "add_maintenance")
             return redirect(url_for('add_maintenance'))
 
         # Process each entry
@@ -240,23 +260,23 @@ def add_maintenance():
             
             # Validate vehicle code format
             if not any(vehicle_code.startswith(p) for p in expected_prefixes):
-                flash(f"Código de vehículo inválido en entrada {i+1}: {vehicle_code}", "error")
+                flash(f"Código de vehículo inválido en entrada {i+1}: {vehicle_code}", "add_maintenance")
                 continue
 
             # Validate team number matches
             try:
                 code_number = int(vehicle_code[1:])
                 if code_number != team_number:
-                    flash(f"El vehículo {vehicle_code} no pertenece al equipo {team}", "error")
+                    flash(f"El vehículo {vehicle_code} no pertenece al equipo {team}", "add_maintenance")
                     continue
             except ValueError:
-                flash(f"Formato de vehículo inválido en entrada {i+1}: {vehicle_code}", "error")
+                flash(f"Formato de vehículo inválido en entrada {i+1}: {vehicle_code}", "add_maintenance")
                 continue
 
             # Look up vehicle
             vehicle = session.query(Vehicle).filter_by(code=vehicle_code).first()
             if not vehicle:
-                flash(f"Vehículo {vehicle_code} no encontrado en entrada {i+1}", "error")
+                flash(f"Vehículo {vehicle_code} no encontrado en entrada {i+1}", "add_maintenance")
                 continue
 
             # Convert times
@@ -264,7 +284,7 @@ def add_maintenance():
                 start_time = datetime.strptime(start_times[i], '%H:%M').time() if start_times[i] else None
                 end_time = datetime.strptime(end_times[i], '%H:%M').time() if end_times[i] else None
             except ValueError:
-                flash(f"Formato de hora inválido en entrada {i+1}", "error")
+                flash(f"Formato de hora inválido en entrada {i+1}", "add_maintenance")
                 continue
 
             # Look up component
@@ -273,7 +293,7 @@ def add_maintenance():
                 component=components[i]
             ).first()
             if not component_obj:
-                flash(f"Componente no encontrado para entrada {i+1}: {parts[i]} - {components[i]}", "error")
+                flash(f"Componente no encontrado para entrada {i+1}: {parts[i]} - {components[i]}", "add_maintenance")
                 continue
 
             # Create log entry
@@ -294,10 +314,10 @@ def add_maintenance():
 
         try:
             session.commit()
-            flash("Registros añadidos exitosamente.", "success")
+            flash("Registros añadidos exitosamente.", "add_maintenance")
         except Exception as e:
             session.rollback()
-            flash(f"Error al guardar los registros: {str(e)}", "error")
+            flash(f"Error al guardar los registros: {str(e)}", "add_maintenance")
 
         return redirect(url_for('add_maintenance'))
 
@@ -326,8 +346,21 @@ def get_components(vehicle_type, part):
 
 @app.route('/download_logs')
 def download_logs():
-    # Query logs with vehicle and component details
-    logs = (
+    # Generate timestamp
+    local_time = get_local_time()
+    timestamp = local_time.strftime("%Y-%m-%d_%H%M%S")
+    filename = f"mantenimiento_{timestamp}.xlsx"
+
+    # Get filter parameters from request
+    vehicle_id = request.args.get('code', type=int)
+    part = request.args.get('part')
+    component = request.args.get('component')
+    year = request.args.get('year', type=int)
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+
+    # Base query
+    query = (
         db.session.query(
             Vehicle.code.label("Equipo"),
             Component.part.label("Parte"),
@@ -336,7 +369,7 @@ def download_logs():
             MainLogs.start_time,
             MainLogs.end_time,
             MainLogs.action,
-            MainLogs.odometer_km.label("Odometro (Km.)"),
+            MainLogs.odometer_km.label("Kilometros"),
             MainLogs.odometer_hrs.label("Odometro (hrs.)"),
             MainLogs.supervisor.label("Responsable"),
             MainLogs.comment.label("Comentario"),
@@ -344,8 +377,24 @@ def download_logs():
         )
         .join(Vehicle, MainLogs.vehicle_id == Vehicle.id)
         .join(Component, MainLogs.component_id == Component.id)
-        .all()
     )
+
+    # Apply filters
+    if vehicle_id:
+        query = query.filter(Vehicle.id == vehicle_id)
+    if part:
+        query = query.filter(Component.part.ilike(f"%{part}%"))
+    if component:
+        query = query.filter(Component.component.ilike(f"%{component}%"))
+    if year:
+        query = query.filter(db.extract('year', MainLogs.log_date) == year)
+    if date_from:
+        query = query.filter(MainLogs.log_date >= date_from)
+    if date_to:
+        query = query.filter(MainLogs.log_date <= date_to)
+
+    # Execute query
+    logs = query.all()
 
     # Convert to DataFrame
     df = pd.DataFrame(logs, columns=[
@@ -353,18 +402,43 @@ def download_logs():
         "Acción", "Odometro (Km.)", "Odometro (hrs.)", "Responsable", "Comentario", "Costo"
     ])
 
-    # Save to an Excel file in memory
+    # Format date
+    df['Fecha'] = pd.to_datetime(df['Fecha']).dt.strftime('%d/%m/%Y')
+
+    # Save to Excel in memory
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Maintenance Logs')
+        df.to_excel(writer, index=False, sheet_name='Registros')
+        
+        # Add auto-filter
+        worksheet = writer.sheets['Registros']
+        worksheet.autofilter(0, 0, 0, len(df.columns)-1)
+        
+        # Add column formatting
+        for idx, col in enumerate(df):
+            series = df[col]
+            max_len = max((
+                series.astype(str).map(len).max(),  # len of largest item
+                len(str(series.name))  # len of column name/header
+            )) + 1
+            worksheet.set_column(idx, idx, max_len)
 
     output.seek(0)
 
-    # Serve file for download
+    # Create filename with date filter if applicable
+    filename = "registros_mantenimiento"
+    if date_from and date_to:
+        filename += f"_{date_from}_a_{date_to}"
+    elif date_from:
+        filename += f"_desde_{date_from}"
+    elif date_to:
+        filename += f"_hasta_{date_to}"
+    filename += ".xlsx"
+
     return send_file(
         output,
         as_attachment=True,
-        download_name="maintenance_logs.xlsx",
+        download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
@@ -388,10 +462,10 @@ def upload_logs():
         file.save(file_path)
 
         process_excel(file_path)
-        flash("Excel data uploaded successfully!")
+        flash("Excel data uploaded successfully!", "main_logs")
         return redirect(url_for("logs"))
 
-    flash("Invalid file type. Please upload an Excel file.")
+    flash("Invalid file type. Please upload an Excel file.", "main_logs")
     return redirect(url_for("logs"))
 
 if __name__ == '__main__':

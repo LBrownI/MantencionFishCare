@@ -33,6 +33,19 @@
   </style>
 </head>
 <body>
+    <header>
+        {% include 'topbar.html' %}
+    </header>
+    {% with messages = get_flashed_messages(category_filter=["detailed_log"]) %}
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-info">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
   <div class="container my-5">
     <h1 class="text-center mb-4">Detalle de Registro</h1>
     
@@ -62,23 +75,70 @@
         <p><strong>Componente:</strong> {{ component }}</p>
       </div>
 
-      <!-- Segundo Bloque -->
-      <div class="log-box log-box-container">
-        <h4>Detalles Adicionales</h4>
-        <p><strong>Kilómetros:</strong> {{ odometer_km }}</p>
-        <p><strong>Odómetro (Hrs):</strong> {{ odometer_hrs }}</p>
-        <p><strong>Costo:</strong> {{ cost }}</p>
-        <p><strong>Responsable:</strong> {{ supervisor }}</p>
-        <p><strong>Comentarios:</strong> {{ comment }}</p>
-      </div>
-    </div>
-
-    <div class="text-center mt-4">
-      <a href="{{ url_for('logs') }}" class="btn btn-primary">Volver a la lista de registros</a>
+        <!-- Segundo Bloque -->
+        <div class="log-box log-box-container">
+            <h4>Detalles Adicionales</h4>
+            <p><strong>Kilómetros:</strong> {{ odometer_km }}</p>
+            <p><strong>Odómetro (Hrs):</strong> {{ odometer_hrs }}</p>
+            <p class="d-flex justify-content-between align-items-center">
+                <span><strong>Costo:</strong> {{ cost if cost else "Sin costo registrado" }}</span>
+                <button class="btn btn-sm btn-outline-secondary" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#editCostModal">
+                    Editar
+                </button>
+            </p>
+            <p><strong>Responsable:</strong> {{ supervisor }}</p>
+            <p><strong>Comentarios:</strong> {{ comment }}</p>
+        </div>
     </div>
     {% endif %}
   </div>
 
+    <!-- Add these at the bottom of the body -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('logs') }}" class="btn btn-primary">Volver a la lista de registros</a>
+        <form method="POST" action="{{ url_for('delete_log', id=id) }}" class="d-inline">
+            <button type="button" 
+                    class="btn btn-danger" 
+                    onclick="confirmDelete()">
+                Eliminar Registro
+            </button>
+        </form>
+    </div>
+
+        <!-- Edit Cost Modal -->
+    <div class="modal fade" id="editCostModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Costo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('update_cost', id=id) }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nuevo Costo:</label>
+                            <input type="number" step="0.01" class="form-control" name="new_cost" 
+                                value="{{ cost if cost else '' }}" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function confirmDelete() {
+        if (confirm('¿Estás seguro que deseas eliminar este registro permanentemente?')) {
+            document.forms[0].submit();
+        }
+    }
+    </script>
 </body>
 </html>
