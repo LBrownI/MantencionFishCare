@@ -2,8 +2,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,flask
 
 # my-sql server
-.my/
-.my\sql-data/
+# .my/
+# .my\sql-data/
 
 ### Flask ###
 instance/*
